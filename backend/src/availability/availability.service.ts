@@ -10,7 +10,12 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { CreateAvailabilityDto, AvailabilityType, DayOfWeek, RepeatType } from './dto/create-availability.dto';
+import {
+  CreateAvailabilityDto,
+  AvailabilityType,
+  DayOfWeek,
+  RepeatType,
+} from './dto/create-availability.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { errorMessages } from '../common/errors/error-messages';
 
@@ -97,7 +102,9 @@ export class AvailabilityService {
           createAvailabilityDto.endTime,
         )
       ) {
-        throw new BadRequestException(errorMessages.availability.END_TIME_BEFORE_START);
+        throw new BadRequestException(
+          errorMessages.availability.END_TIME_BEFORE_START,
+        );
       }
 
       // Check for offline availability location requirement
@@ -120,12 +127,17 @@ export class AvailabilityService {
         );
       }
 
-      // Validate provider exists
+      // Validate provider exists and is not archived
       const provider = await this.prisma.provider.findUnique({
         where: { id: createAvailabilityDto.providerId },
       });
       if (!provider) {
         throw new BadRequestException('Provider not found');
+      }
+      if (provider.archived) {
+        throw new BadRequestException(
+          errorMessages.availability.ARCHIVED_PROVIDER,
+        );
       }
 
       // Validate location exists and is active if provided
@@ -137,7 +149,14 @@ export class AvailabilityService {
           throw new BadRequestException('Location not found');
         }
         if (!location.isActive) {
-          throw new BadRequestException(errorMessages.locations.INACTIVE_LOCATION);
+          throw new BadRequestException(
+            errorMessages.locations.INACTIVE_LOCATION,
+          );
+        }
+        if (location.archived) {
+          throw new BadRequestException(
+            errorMessages.availability.ARCHIVED_LOCATION,
+          );
         }
       }
 
@@ -157,12 +176,15 @@ export class AvailabilityService {
         );
       }
 
-      const createdAvailability = await this.prisma.availability.create({ data: createAvailabilityDto });
-      
+      const createdAvailability = await this.prisma.availability.create({
+        data: createAvailabilityDto,
+      });
+
       // Cast enum values to proper types
       return {
         ...createdAvailability,
-        availabilityType: createdAvailability.availabilityType as AvailabilityType,
+        availabilityType:
+          createdAvailability.availabilityType as AvailabilityType,
         dayOfWeek: createdAvailability.dayOfWeek as DayOfWeek,
         repeatType: createdAvailability.repeatType as RepeatType,
       };
@@ -231,7 +253,7 @@ export class AvailabilityService {
       ]);
 
       // Cast enum values to proper types
-      const typedAvailabilities = availabilities.map(availability => ({
+      const typedAvailabilities = availabilities.map((availability) => ({
         ...availability,
         availabilityType: availability.availabilityType as AvailabilityType,
         dayOfWeek: availability.dayOfWeek as DayOfWeek,
@@ -260,7 +282,7 @@ export class AvailabilityService {
     try {
       this.logger.log(`Fetching availability with id ${id}`);
       const where: any = { id };
-      
+
       // If providerId is provided, ensure the availability belongs to that provider
       if (providerId) {
         where.providerId = providerId;
@@ -288,14 +310,16 @@ export class AvailabilityService {
           },
         },
       });
-      
+
       if (!availability) {
         if (providerId) {
-          throw new ForbiddenException(errorMessages.availability.CANNOT_MODIFY_OTHER_PROVIDER);
+          throw new ForbiddenException(
+            errorMessages.availability.CANNOT_MODIFY_OTHER_PROVIDER,
+          );
         }
         throw new NotFoundException(errorMessages.availability.NOT_FOUND);
       }
-      
+
       // Cast enum values to proper types
       return {
         ...availability,
@@ -308,30 +332,40 @@ export class AvailabilityService {
         'Error fetching availability',
         (error as Error).stack || (error as Error).message,
       );
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to fetch availability');
     }
   }
 
-  async update(id: number, updateAvailabilityDto: UpdateAvailabilityDto, providerId?: number) {
+  async update(
+    id: number,
+    updateAvailabilityDto: UpdateAvailabilityDto,
+    providerId?: number,
+  ) {
     try {
       this.logger.log(
         `Updating availability with id ${id}`,
         updateAvailabilityDto,
       );
-      
+
       const where: any = { id };
       if (providerId) {
         where.providerId = providerId;
       }
-      
+
       const availability = await this.prisma.availability.findUnique({
         where,
       });
-      
+
       if (!availability) {
         if (providerId) {
-          throw new ForbiddenException(errorMessages.availability.CANNOT_MODIFY_OTHER_PROVIDER);
+          throw new ForbiddenException(
+            errorMessages.availability.CANNOT_MODIFY_OTHER_PROVIDER,
+          );
         }
         throw new NotFoundException(errorMessages.availability.NOT_FOUND);
       }
@@ -358,20 +392,28 @@ export class AvailabilityService {
             updateAvailabilityDto.endTime,
           )
         ) {
-          throw new BadRequestException(errorMessages.availability.END_TIME_BEFORE_START);
+          throw new BadRequestException(
+            errorMessages.availability.END_TIME_BEFORE_START,
+          );
         }
       }
 
       // Validate location requirements
-      const newAvailabilityType = updateAvailabilityDto.availabilityType || availability.availabilityType;
-      const newLocationId = updateAvailabilityDto.locationId || availability.locationId;
+      const newAvailabilityType =
+        updateAvailabilityDto.availabilityType || availability.availabilityType;
+      const newLocationId =
+        updateAvailabilityDto.locationId || availability.locationId;
 
       if (newAvailabilityType === 'OFFLINE' && !newLocationId) {
-        throw new BadRequestException(errorMessages.availability.OFFLINE_REQUIRES_LOCATION);
+        throw new BadRequestException(
+          errorMessages.availability.OFFLINE_REQUIRES_LOCATION,
+        );
       }
 
       if (newAvailabilityType === 'VIRTUAL' && newLocationId) {
-        throw new BadRequestException(errorMessages.availability.VIRTUAL_NO_LOCATION);
+        throw new BadRequestException(
+          errorMessages.availability.VIRTUAL_NO_LOCATION,
+        );
       }
 
       // Validate location exists and is active if provided
@@ -383,7 +425,9 @@ export class AvailabilityService {
           throw new BadRequestException('Location not found');
         }
         if (!location.isActive) {
-          throw new BadRequestException(errorMessages.locations.INACTIVE_LOCATION);
+          throw new BadRequestException(
+            errorMessages.locations.INACTIVE_LOCATION,
+          );
         }
       }
 
@@ -425,7 +469,8 @@ export class AvailabilityService {
       // Cast enum values to proper types
       return {
         ...updatedAvailability,
-        availabilityType: updatedAvailability.availabilityType as AvailabilityType,
+        availabilityType:
+          updatedAvailability.availabilityType as AvailabilityType,
         dayOfWeek: updatedAvailability.dayOfWeek as DayOfWeek,
         repeatType: updatedAvailability.repeatType as RepeatType,
       };
@@ -447,30 +492,36 @@ export class AvailabilityService {
   async remove(id: number, providerId?: number) {
     try {
       this.logger.log(`Deleting availability with id ${id}`);
-      
+
       const where: any = { id };
       if (providerId) {
         where.providerId = providerId;
       }
-      
+
       const availability = await this.prisma.availability.findUnique({
         where,
       });
-      
+
       if (!availability) {
         if (providerId) {
-          throw new ForbiddenException(errorMessages.availability.CANNOT_MODIFY_OTHER_PROVIDER);
+          throw new ForbiddenException(
+            errorMessages.availability.CANNOT_MODIFY_OTHER_PROVIDER,
+          );
         }
         throw new NotFoundException(errorMessages.availability.NOT_FOUND);
       }
-      
+
       return this.prisma.availability.delete({ where: { id } });
     } catch (error: unknown) {
       this.logger.error(
         'Error deleting availability',
         (error as Error).stack || (error as Error).message,
       );
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to delete availability');
     }
   }

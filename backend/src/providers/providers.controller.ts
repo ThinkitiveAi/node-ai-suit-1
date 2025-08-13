@@ -43,7 +43,7 @@ interface RequestWithUser extends Request {
 }
 
 @ApiTags('providers')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('providers')
 export class ProvidersController {
   constructor(private readonly providersService: ProvidersService) {}

@@ -17,6 +17,9 @@ describe('ProvidersService', () => {
       update: jest.fn(),
       count: jest.fn(),
     },
+    patient: {
+      findUnique: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -65,6 +68,7 @@ describe('ProvidersService', () => {
       };
 
       mockPrismaService.provider.findUnique.mockResolvedValue(null);
+      mockPrismaService.patient.findUnique.mockResolvedValue(null);
       mockPrismaService.provider.create.mockResolvedValue(mockCreatedProvider);
 
       const result = await service.create(createProviderDto);

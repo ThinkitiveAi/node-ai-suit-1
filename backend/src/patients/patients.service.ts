@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
@@ -19,6 +21,18 @@ export class PatientsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private parsePatientData(patient: any) {
+    const { password: _, ...patientData } = patient;
+
+    // Remove password from assignedProvider if it exists
+    if (patientData.assignedProvider) {
+      const { password: __, ...providerData } = patientData.assignedProvider;
+      patientData.assignedProvider = providerData;
+    }
+
+    return patientData;
+  }
+
   async create(createPatientDto: CreatePatientDto) {
     try {
       this.logger.log('Creating patient', createPatientDto);
@@ -29,6 +43,15 @@ export class PatientsService {
       });
 
       if (existingPatient) {
+        throw new BadRequestException(errorMessages.patients.EMAIL_EXISTS);
+      }
+
+      // Also check if email exists in providers table
+      const existingProvider = await this.prisma.provider.findUnique({
+        where: { email: createPatientDto.email },
+      });
+
+      if (existingProvider) {
         throw new BadRequestException(errorMessages.patients.EMAIL_EXISTS);
       }
 
@@ -48,17 +71,17 @@ export class PatientsService {
         data: {
           ...createPatientDto,
           password: bcrypt.hashSync(createPatientDto.password, 10),
+          dateOfBirth: createPatientDto.dateOfBirth
+            ? new Date(createPatientDto.dateOfBirth)
+            : null,
+          emergencyContact: createPatientDto.emergencyContact
+            ? (createPatientDto.emergencyContact as any)
+            : undefined,
         },
         include: { assignedProvider: true },
       });
 
-      // Remove password from response and assignedProvider
-      const { password: _, ...patientData } = patient;
-      if (patientData.assignedProvider) {
-        const { password: __, ...providerData } = patientData.assignedProvider;
-        patientData.assignedProvider = providerData as any;
-      }
-      return patientData;
+      return this.parsePatientData(patient);
     } catch (error: unknown) {
       this.logger.error(
         'Error creating patient',
@@ -106,6 +129,14 @@ export class PatientsService {
             name: true,
             email: true,
             phone: true,
+            streetAddress: true,
+            city: true,
+            state: true,
+            zipCode: true,
+            country: true,
+            dateOfBirth: true,
+            gender: true,
+            emergencyContact: true,
             assignedProvider: {
               select: {
                 id: true,
@@ -124,7 +155,7 @@ export class PatientsService {
       ]);
 
       return {
-        data: patients,
+        data: patients.map((patient) => this.parsePatientData(patient)),
         meta: {
           page,
           limit,
@@ -152,13 +183,7 @@ export class PatientsService {
         throw new NotFoundException(errorMessages.patients.NOT_FOUND);
       }
 
-      // Remove password from patient and assignedProvider
-      const { password: _, ...patientData } = patient;
-      if (patientData.assignedProvider) {
-        const { password: __, ...providerData } = patientData.assignedProvider;
-        patientData.assignedProvider = providerData as any;
-      }
-      return patientData;
+      return this.parsePatientData(patient);
     } catch (error: unknown) {
       this.logger.error(
         'Error fetching patient',
@@ -177,6 +202,24 @@ export class PatientsService {
         throw new NotFoundException(errorMessages.patients.NOT_FOUND);
       }
 
+      // Check for email uniqueness if email is being updated
+      if (updatePatientDto.email && updatePatientDto.email !== patient.email) {
+        const existingPatient = await this.prisma.patient.findUnique({
+          where: { email: updatePatientDto.email },
+        });
+        if (existingPatient) {
+          throw new BadRequestException(errorMessages.patients.EMAIL_EXISTS);
+        }
+
+        // Also check if email exists in providers table
+        const existingProvider = await this.prisma.provider.findUnique({
+          where: { email: updatePatientDto.email },
+        });
+        if (existingProvider) {
+          throw new BadRequestException(errorMessages.patients.EMAIL_EXISTS);
+        }
+      }
+
       // Validate assignedProviderId if present
       if (updatePatientDto.assignedProviderId) {
         const provider = await this.prisma.provider.findUnique({
@@ -189,19 +232,27 @@ export class PatientsService {
         }
       }
 
+      // Hash password if it's being updated
+      const updateData: any = { ...updatePatientDto };
+      if (updatePatientDto.password) {
+        updateData.password = bcrypt.hashSync(updatePatientDto.password, 10);
+      }
+
       const updatedPatient = await this.prisma.patient.update({
         where: { id },
-        data: updatePatientDto,
+        data: {
+          ...updateData,
+          dateOfBirth: updatePatientDto.dateOfBirth
+            ? new Date(updatePatientDto.dateOfBirth)
+            : undefined,
+          emergencyContact: updatePatientDto.emergencyContact
+            ? (updatePatientDto.emergencyContact as any)
+            : undefined,
+        },
         include: { assignedProvider: true },
       });
 
-      // Remove password from response and assignedProvider
-      const { password: _, ...patientData } = updatedPatient;
-      if (patientData.assignedProvider) {
-        const { password: __, ...providerData } = patientData.assignedProvider;
-        patientData.assignedProvider = providerData as any;
-      }
-      return patientData;
+      return this.parsePatientData(updatedPatient);
     } catch (error: unknown) {
       this.logger.error(
         'Error updating patient',
@@ -230,13 +281,7 @@ export class PatientsService {
         include: { assignedProvider: true },
       });
 
-      // Remove password from response and assignedProvider
-      const { password: _, ...patientData } = archivedPatient;
-      if (patientData.assignedProvider) {
-        const { password: __, ...providerData } = patientData.assignedProvider;
-        patientData.assignedProvider = providerData as any;
-      }
-      return patientData;
+      return this.parsePatientData(archivedPatient);
     } catch (error: unknown) {
       this.logger.error(
         'Error archiving patient',
@@ -261,13 +306,7 @@ export class PatientsService {
         include: { assignedProvider: true },
       });
 
-      // Remove password from response and assignedProvider
-      const { password: _, ...patientData } = restoredPatient;
-      if (patientData.assignedProvider) {
-        const { password: __, ...providerData } = patientData.assignedProvider;
-        patientData.assignedProvider = providerData as any;
-      }
-      return patientData;
+      return this.parsePatientData(restoredPatient);
     } catch (error: unknown) {
       this.logger.error(
         'Error restoring patient',
@@ -300,9 +339,7 @@ export class PatientsService {
         throw new NotFoundException(errorMessages.patients.NOT_FOUND);
       }
 
-      // Remove password from patient
-      const { password: _, ...patientData } = patient;
-      return patientData;
+      return this.parsePatientData(patient);
     } catch (error: unknown) {
       this.logger.error(
         'Error getting patient profile',

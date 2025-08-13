@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -43,7 +44,7 @@ interface RequestWithUser extends Request {
 }
 
 @ApiTags('patients')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('patients')
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}

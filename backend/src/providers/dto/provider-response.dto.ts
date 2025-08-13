@@ -16,11 +16,20 @@ export class ProviderDto {
   @ApiProperty({ description: 'Provider specialty' })
   specialty: string;
 
+  @ApiPropertyOptional({ description: 'Provider street address' })
+  streetAddress?: string | null;
+
   @ApiProperty({ description: 'Provider city' })
   city: string;
 
   @ApiProperty({ description: 'Provider state' })
   state: string;
+
+  @ApiPropertyOptional({ description: 'Provider zip code' })
+  zipCode?: string | null;
+
+  @ApiPropertyOptional({ description: 'Provider country' })
+  country?: string | null;
 
   @ApiProperty({ description: 'Role ID' })
   roleId: number;

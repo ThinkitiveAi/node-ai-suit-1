@@ -44,7 +44,7 @@ describe('PatientsController', () => {
         name: 'John Doe',
         password: 'StrongP@ssw0rd!',
         phone: '+1234567890',
-        address: '123 Main St, City, State',
+        streetAddress: '123 Main St, City, State',
       };
 
       const mockResponse = {
@@ -52,7 +52,7 @@ describe('PatientsController', () => {
         email: 'patient@example.com',
         name: 'John Doe',
         phone: '+1234567890',
-        address: '123 Main St, City, State',
+        streetAddress: '123 Main St, City, State',
         assignedProvider: null,
         archived: false,
         createdAt: new Date(),
@@ -122,7 +122,7 @@ describe('PatientsController', () => {
         email: 'patient@example.com',
         name: 'John Doe',
         phone: '+1234567890',
-        address: '123 Main St, City, State',
+        streetAddress: '123 Main St, City, State',
         assignedProvider: {
           id: 1,
           name: 'Dr. Smith',
@@ -160,7 +160,7 @@ describe('PatientsController', () => {
       const updatePatientDto: UpdatePatientDto = {
         name: 'John Updated',
         phone: '+1234567891',
-        address: '456 Oak St, City, State',
+        streetAddress: '456 Oak St, City, State',
       };
 
       const mockResponse = {
@@ -168,7 +168,7 @@ describe('PatientsController', () => {
         email: 'patient@example.com',
         name: 'John Updated',
         phone: '+1234567891',
-        address: '456 Oak St, City, State',
+        streetAddress: '456 Oak St, City, State',
         assignedProvider: null,
         archived: false,
         createdAt: new Date(),
@@ -194,7 +194,7 @@ describe('PatientsController', () => {
         email: 'patient@example.com',
         name: 'John Doe',
         phone: '+1234567890',
-        address: '123 Main St, City, State',
+        streetAddress: '123 Main St, City, State',
         assignedProvider: null,
         archived: false,
         createdAt: new Date(),
@@ -219,7 +219,7 @@ describe('PatientsController', () => {
         email: 'patient@example.com',
         name: 'John Doe',
         phone: '+1234567890',
-        address: '123 Main St, City, State',
+        streetAddress: '123 Main St, City, State',
         assignedProvider: null,
         archived: true,
         createdAt: new Date(),

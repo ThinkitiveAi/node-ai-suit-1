@@ -41,6 +41,11 @@ export class CreateProviderDto {
   @MaxLength(100)
   specialty: string;
 
+  @ApiPropertyOptional({ example: '456 Medical Center Blvd' })
+  @IsOptional()
+  @MaxLength(200)
+  streetAddress?: string;
+
   @ApiProperty({ example: 'New York' })
   @IsNotEmpty()
   @MaxLength(100)
@@ -50,6 +55,16 @@ export class CreateProviderDto {
   @IsNotEmpty()
   @MaxLength(50)
   state: string;
+
+  @ApiPropertyOptional({ example: '10001' })
+  @IsOptional()
+  @MaxLength(10)
+  zipCode?: string;
+
+  @ApiPropertyOptional({ example: 'USA' })
+  @IsOptional()
+  @MaxLength(50)
+  country?: string;
 
   @ApiProperty({ example: 5, description: 'Role ID for the provider' })
   @IsNumber()

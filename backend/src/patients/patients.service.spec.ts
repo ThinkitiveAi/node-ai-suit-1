@@ -50,7 +50,7 @@ describe('PatientsService', () => {
         name: 'Test Patient',
         password: 'password123',
         phone: '+1234567890',
-        address: '123 Test St',
+        streetAddress: '123 Test St',
         assignedProviderId: 1,
       };
 
@@ -59,6 +59,7 @@ describe('PatientsService', () => {
         email: 'patient@example.com',
         name: 'Test Patient',
         phone: '+1234567890',
+        streetAddress: '123 Test St',
         assignedProviderId: 1,
         archived: false,
         createdAt: new Date(),
@@ -120,7 +121,7 @@ describe('PatientsService', () => {
           email: 'patient1@example.com',
           name: 'Patient 1',
           phone: '+1234567890',
-          address: '123 Test St',
+          streetAddress: '123 Test St',
           assignedProviderId: 1,
           archived: false,
         },
@@ -129,7 +130,7 @@ describe('PatientsService', () => {
           email: 'patient2@example.com',
           name: 'Patient 2',
           phone: '+1234567891',
-          address: '456 Test St',
+          streetAddress: '456 Test St',
           assignedProviderId: 2,
           archived: false,
         },
@@ -181,7 +182,7 @@ describe('PatientsService', () => {
         email: 'patient@example.com',
         name: 'Test Patient',
         phone: '+1234567890',
-        address: '123 Test St',
+        streetAddress: '123 Test St',
         assignedProviderId: 1,
         archived: false,
       };
@@ -216,7 +217,7 @@ describe('PatientsService', () => {
         email: 'patient@example.com',
         name: 'Updated Patient',
         phone: '+1234567891',
-        address: '123 Test St',
+        streetAddress: '123 Test St',
         assignedProviderId: 1,
         archived: false,
       };
@@ -312,7 +313,7 @@ describe('PatientsService', () => {
         email: 'patient@example.com',
         name: 'Test Patient',
         phone: '+1234567890',
-        address: '123 Test St',
+        streetAddress: '123 Test St',
         assignedProviderId: 1,
         archived: false,
       };

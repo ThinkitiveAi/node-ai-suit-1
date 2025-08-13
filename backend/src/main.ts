@@ -10,6 +10,8 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.setGlobalPrefix('api');
+
   // CORS
   app.enableCors({
     origin: '*',
@@ -22,11 +24,13 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '2mb' }));
 
   // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   // Global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -44,9 +48,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('/api/docs', app, document);
 
-  await app.listen(3000, () => {
-    console.log(`🚀 Application is running on: http://localhost:3000`);
-    console.log(`📄 Swagger UI available at: http://localhost:3000/api/docs`);
+  await app.listen(4000, () => {
+    console.log(`🚀 Application is running on: http://localhost:4000`);
+    console.log(`📄 Swagger UI available at: http://localhost:4000/api/docs`);
   });
 }
 bootstrap();

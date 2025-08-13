@@ -9,6 +9,7 @@ import { PatientsModule } from './patients/patients.module';
 import { ProvidersModule } from './providers/providers.module';
 import { LocationsModule } from './locations/locations.module';
 import { AvailabilityModule } from './availability/availability.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AvailabilityModule } from './availability/availability.module';
     ProvidersModule,
     LocationsModule,
     AvailabilityModule,
+    AppointmentsModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'default_secret',

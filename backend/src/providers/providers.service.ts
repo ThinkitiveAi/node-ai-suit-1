@@ -31,6 +31,15 @@ export class ProvidersService {
         throw new BadRequestException(errorMessages.providers.EMAIL_EXISTS);
       }
 
+      // Also check if email exists in patients table
+      const existingPatient = await this.prisma.patient.findUnique({
+        where: { email: createProviderDto.email },
+      });
+
+      if (existingPatient) {
+        throw new BadRequestException(errorMessages.providers.EMAIL_EXISTS);
+      }
+
       const provider = await this.prisma.provider.create({
         data: {
           ...createProviderDto,
@@ -101,8 +110,11 @@ export class ProvidersService {
             email: true,
             phone: true,
             specialty: true,
+            streetAddress: true,
             city: true,
             state: true,
+            zipCode: true,
+            country: true,
             roleId: true,
             archived: true,
             createdAt: true,
@@ -159,9 +171,33 @@ export class ProvidersService {
         throw new NotFoundException(errorMessages.providers.NOT_FOUND);
       }
 
+      // Check for email uniqueness if email is being updated
+      if (updateProviderDto.email && updateProviderDto.email !== provider.email) {
+        const existingProvider = await this.prisma.provider.findUnique({
+          where: { email: updateProviderDto.email },
+        });
+        if (existingProvider) {
+          throw new BadRequestException(errorMessages.providers.EMAIL_EXISTS);
+        }
+
+        // Also check if email exists in patients table
+        const existingPatient = await this.prisma.patient.findUnique({
+          where: { email: updateProviderDto.email },
+        });
+        if (existingPatient) {
+          throw new BadRequestException(errorMessages.providers.EMAIL_EXISTS);
+        }
+      }
+
+      // Hash password if it's being updated
+      const updateData: any = { ...updateProviderDto };
+      if (updateProviderDto.password) {
+        updateData.password = bcrypt.hashSync(updateProviderDto.password, 10);
+      }
+
       const updatedProvider = await this.prisma.provider.update({
         where: { id },
-        data: updateProviderDto,
+        data: updateData,
       });
 
       // Remove password from response
@@ -172,7 +208,7 @@ export class ProvidersService {
         'Error updating provider',
         (error as Error).stack || (error as Error).message,
       );
-      if (error instanceof NotFoundException) throw error;
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Failed to update provider');
     }
   }

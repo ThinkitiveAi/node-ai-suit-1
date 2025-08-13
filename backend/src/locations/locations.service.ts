@@ -19,6 +19,8 @@ export class LocationsService {
   async create(createLocationDto: CreateLocationDto) {
     try {
       this.logger.log('Creating location', createLocationDto);
+
+      // Check for existing location with same name and city
       const existing = await this.prisma.location.findFirst({
         where: {
           name: createLocationDto.name,
@@ -29,6 +31,25 @@ export class LocationsService {
       if (existing) {
         throw new BadRequestException(errorMessages.locations.NAME_EXISTS);
       }
+
+      // Validate required fields
+      if (
+        !createLocationDto.name ||
+        !createLocationDto.address ||
+        !createLocationDto.city ||
+        !createLocationDto.state
+      ) {
+        throw new BadRequestException(errorMessages.locations.REQUIRED_FIELDS);
+      }
+
+      // Validate zip code format if provided
+      if (
+        createLocationDto.zipCode &&
+        !/^\d{5}(-\d{4})?$/.test(createLocationDto.zipCode)
+      ) {
+        throw new BadRequestException(errorMessages.locations.INVALID_ZIP_CODE);
+      }
+
       return this.prisma.location.create({ data: createLocationDto });
     } catch (error: unknown) {
       this.logger.error(
@@ -53,6 +74,7 @@ export class LocationsService {
         archived: boolean;
         city?: { contains: string; mode: 'insensitive' };
         isActive?: boolean;
+        providerId?: number;
       } = { archived: false };
 
       if (city) where.city = { contains: city, mode: 'insensitive' };
@@ -122,6 +144,14 @@ export class LocationsService {
         if (existing) {
           throw new BadRequestException(errorMessages.locations.NAME_EXISTS);
         }
+      }
+
+      // Validate zip code format if provided
+      if (
+        updateLocationDto.zipCode &&
+        !/^\d{5}(-\d{4})?$/.test(updateLocationDto.zipCode)
+      ) {
+        throw new BadRequestException(errorMessages.locations.INVALID_ZIP_CODE);
       }
 
       return this.prisma.location.update({

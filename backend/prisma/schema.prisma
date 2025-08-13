@@ -33,15 +33,26 @@ model Patient {
   name      String    @db.VarChar(100)
   password  String    @db.VarChar(100)
   phone     String?   @db.VarChar(20)
-  address   String?   @db.VarChar(200)
+  streetAddress String? @db.VarChar(200) @map("street_address")
+  city      String?   @db.VarChar(100)
+  state     String?   @db.VarChar(50)
+  zipCode   String?   @db.VarChar(10) @map("zip_code")
+  country   String?   @db.VarChar(50) @default("USA")
+  dateOfBirth DateTime? @map("date_of_birth")
+  gender    String?   @db.VarChar(20)
+  emergencyContact Json? @map("emergency_contact")
   assignedProviderId Int? @map("assigned_provider_id")
   assignedProvider   Provider? @relation("PatientProvider", fields: [assignedProviderId], references: [id])
   archived  Boolean   @default(false)
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
+  appointments Appointment[]
 
   @@index([email])
   @@index([assignedProviderId])
+  @@index([city])
+  @@index([state])
+  @@index([dateOfBirth])
   @@map("patients")
 }
 
@@ -52,8 +63,11 @@ model Provider {
   password  String    @db.VarChar(100)
   phone     String?   @db.VarChar(20)
   specialty String    @db.VarChar(100)
+  streetAddress String? @db.VarChar(200) @map("street_address")
   city      String    @db.VarChar(100)
   state     String    @db.VarChar(50)
+  zipCode   String?   @db.VarChar(10) @map("zip_code")
+  country   String?   @db.VarChar(50) @default("USA")
   roleId    Int       @map("role_id")
   role      Role      @relation(fields: [roleId], references: [id])
   archived  Boolean   @default(false)
@@ -61,10 +75,12 @@ model Provider {
   updatedAt DateTime  @updatedAt @map("updated_at")
   patients  Patient[] @relation("PatientProvider")
   availabilities Availability[]
+  appointments Appointment[]
 
   @@index([email])
   @@index([specialty])
   @@index([city])
+  @@index([state])
   @@index([roleId])
   @@map("providers")
 }
@@ -82,6 +98,7 @@ model Location {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   availabilities Availability[]
+  appointments Appointment[]
 
   @@index([city])
   @@index([isActive])
@@ -108,4 +125,31 @@ model Availability {
   @@index([dayOfWeek])
   @@index([isActive])
   @@map("availabilities")
+}
+
+model Appointment {
+  id                Int       @id @default(autoincrement())
+  uuid              String    @unique @default(uuid()) @map("uuid") @db.Uuid
+  date              DateTime? @map("date")
+  type              Int?      @map("type")
+  slotId            Int?      @map("slot_id")
+  locationId        Int?      @map("location_id")
+  time              String?   @map("time")
+  chiefComplaint    String?   @map("chief_complaint")
+  status            String?   @default("Scheduled") @map("status")
+  patientId         Int?      @map("patient_id")
+  patientConflictId Int?      @map("patient_conflict_id")
+  practiceUserId    Int?      @map("provider_id")
+  isEmergency       Boolean   @default(false) @map("is_emergency")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  patient                      Patient?                      @relation(fields: [patientId], references: [id])
+  location                     Location?                     @relation(fields: [locationId], references: [id])
+  provider                     Provider?                     @relation(fields: [practiceUserId], references: [id])
+
+  @@index([locationId])
+  @@index([practiceUserId])
+  @@index([patientId])
+  @@map("appointments")
 }

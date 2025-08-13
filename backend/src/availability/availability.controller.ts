@@ -12,9 +12,6 @@ import {
   ParseIntPipe,
   Request,
 } from '@nestjs/common';
-import { AvailabilityService } from './availability.service';
-import { CreateAvailabilityDto } from './dto/create-availability.dto';
-import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -23,6 +20,10 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+
+import { AvailabilityService } from './availability.service';
+import { CreateAvailabilityDto } from './dto/create-availability.dto';
+import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { JwtAuthGuard } from '../middleware/jwt-auth.guard';
 import { RolesGuard } from '../middleware/roles.guard';
 import { UserTypes } from '../middleware/roles.decorator';
@@ -43,7 +44,7 @@ interface RequestWithUser extends Request {
 }
 
 @ApiTags('availability')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @UserTypes('provider')
 @Controller('availability')

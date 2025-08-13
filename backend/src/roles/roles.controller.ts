@@ -30,7 +30,7 @@ import {
 } from './dto/role-response.dto';
 
 @ApiTags('roles')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}

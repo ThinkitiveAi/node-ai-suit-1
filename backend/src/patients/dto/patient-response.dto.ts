@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class EmergencyContactResponseDto {
+  @ApiProperty({ description: 'Emergency contact name' })
+  name: string;
+
+  @ApiProperty({ description: 'Emergency contact phone' })
+  phone: string;
+
+  @ApiProperty({ description: 'Emergency contact relationship' })
+  relationship: string;
+}
+
 export class PatientDto {
   @ApiProperty({ description: 'Patient ID' })
   id: number;
@@ -13,8 +24,29 @@ export class PatientDto {
   @ApiPropertyOptional({ description: 'Patient phone number' })
   phone?: string | null;
 
-  @ApiPropertyOptional({ description: 'Patient address' })
-  address?: string | null;
+  @ApiPropertyOptional({ description: 'Patient street address' })
+  streetAddress?: string | null;
+
+  @ApiPropertyOptional({ description: 'Patient city' })
+  city?: string | null;
+
+  @ApiPropertyOptional({ description: 'Patient state' })
+  state?: string | null;
+
+  @ApiPropertyOptional({ description: 'Patient zip code' })
+  zipCode?: string | null;
+
+  @ApiPropertyOptional({ description: 'Patient country' })
+  country?: string | null;
+
+  @ApiPropertyOptional({ description: 'Patient date of birth' })
+  dateOfBirth?: Date | null;
+
+  @ApiPropertyOptional({ description: 'Patient gender' })
+  gender?: string | null;
+
+  @ApiPropertyOptional({ description: 'Emergency contact information', type: EmergencyContactResponseDto })
+  emergencyContact?: EmergencyContactResponseDto | null;
 
   @ApiPropertyOptional({ description: 'Assigned provider ID' })
   assignedProviderId?: number | null;

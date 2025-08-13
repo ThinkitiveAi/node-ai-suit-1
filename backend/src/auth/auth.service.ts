@@ -9,6 +9,7 @@ import { PrismaService } from '../common/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { Response } from 'express';
+import { errorMessages } from '../common/errors/error-messages';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,14 @@ export class AuthService {
 
   async login(loginDto: LoginDto, res: Response) {
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(loginDto.email)) {
+        throw new UnauthorizedException(
+          errorMessages.auth.INVALID_EMAIL_FORMAT,
+        );
+      }
+
       // First try to find as provider
       const provider = await this.prisma.provider.findUnique({
         where: { email: loginDto.email },
@@ -140,6 +149,14 @@ export class AuthService {
 
   async patientLogin(loginDto: LoginDto, res: Response) {
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(loginDto.email)) {
+        throw new UnauthorizedException(
+          errorMessages.auth.INVALID_EMAIL_FORMAT,
+        );
+      }
+
       const patient = await this.prisma.patient.findUnique({
         where: { email: loginDto.email },
         include: { assignedProvider: true },
@@ -165,6 +182,14 @@ export class AuthService {
 
   async providerLogin(loginDto: LoginDto, res: Response) {
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(loginDto.email)) {
+        throw new UnauthorizedException(
+          errorMessages.auth.INVALID_EMAIL_FORMAT,
+        );
+      }
+
       const provider = await this.prisma.provider.findUnique({
         where: { email: loginDto.email },
         include: { role: true },

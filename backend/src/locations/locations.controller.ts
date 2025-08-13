@@ -32,7 +32,7 @@ import {
 } from './dto/location-response.dto';
 
 @ApiTags('locations')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('locations')
 export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
@@ -61,6 +61,12 @@ export class LocationsController {
     status: 200,
     description: 'List of locations.',
     type: LocationListResponseDto,
+  })
+  @ApiQuery({
+    name: 'providerId',
+    required: false,
+    type: Number,
+    description: 'Filter by provider ID',
   })
   @ApiQuery({
     name: 'page',
