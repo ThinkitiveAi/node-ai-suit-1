@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .logo-preview {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .logo-preview img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .download-section {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .download-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download-btn:hover {
+            background: #5a6fd8;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Healthcare Management System - Logo Converter</h1>
+        
+        <div class="logo-preview">
+            <h3>Logo Preview</h3>
+            <img src="logo.svg" alt="Healthcare Logo" id="logoPreview">
+        </div>
+        
+        <div class="download-section">
+            <button class="download-btn" onclick="downloadLogo(192)">Download 192x192 PNG</button>
+            <button class="download-btn" onclick="downloadLogo(512)">Download 512x512 PNG</button>
+        </div>
+        
+        <div class="instructions">
+            <h4>Instructions:</h4>
+            <ol>
+                <li>Click the download buttons above to generate PNG versions of the logo</li>
+                <li>Save the downloaded files as <code>logo192.png</code> and <code>logo512.png</code></li>
+                <li>Replace the existing logo files in the <code>public</code> folder</li>
+                <li>The new logos will be used by the application</li>
+            </ol>
+        </div>
+        
+        <div class="logo-preview">
+            <h3>Favicon Preview</h3>
+            <img src="favicon.svg" alt="Healthcare Favicon" style="width: 64px; height: 64px;">
+        </div>
+    </div>
+
+    <script>
+        function downloadLogo(size) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = size;
+            canvas.height = size;
+            
+            const img = new Image();
+            img.onload = function() {
+                // Create a circular mask
+                ctx.beginPath();
+                ctx.arc(size/2, size/2, size/2, 0, 2 * Math.PI);
+                ctx.clip();
+                
+                // Draw the image
+                ctx.drawImage(img, 0, 0, size, size);
+                
+                // Download the image
+                const link = document.createElement('a');
+                link.download = `logo${size}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            };
+            img.src = 'logo.svg';
+        }
+    </script>
+</body>
+</html> 
