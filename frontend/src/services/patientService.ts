@@ -20,28 +20,34 @@ interface PatientOnboardRequest {
 }
 
 interface PatientOnboardResponse {
-  patient: {
-    id: number;
-    email: string;
-    name: string;
-    phone: string;
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    dateOfBirth: string;
-    gender: string;
-    emergencyContact: {
+  success: boolean;
+  data: {
+    patient: {
+      id: number;
+      email: string;
       name: string;
       phone: string;
-      relationship: string;
+      streetAddress: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+      dateOfBirth: string;
+      gender: string;
+      emergencyContact: {
+        name: string;
+        phone: string;
+        relationship: string;
+      };
+      assignedProviderId: number | null;
+      archived: boolean;
+      createdAt: string;
+      updatedAt: string;
+      assignedProvider: any | null;
     };
-    assignedProviderId: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+    message: string;
   };
-  message: string;
+  timestamp: string;
 }
 
 interface PatientListResponse {

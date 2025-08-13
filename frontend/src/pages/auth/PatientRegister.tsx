@@ -111,13 +111,59 @@ const PatientRegister: React.FC = () => {
       };
 
       const response = await patientService.onboardPatient(patientData);
-      if (response.message) {
+      
+      // Handle the nested API response structure
+      if (response.success && response.data?.patient) {
+        const patient = response.data.patient;
+        
+        // Store patient info in localStorage for potential auto-login or reference
+        const patientInfo = {
+          id: patient.id,
+          email: patient.email,
+          name: patient.name,
+          phone: patient.phone,
+          streetAddress: patient.streetAddress,
+          city: patient.city,
+          state: patient.state,
+          zipCode: patient.zipCode,
+          dateOfBirth: patient.dateOfBirth,
+          gender: patient.gender,
+          emergencyContact: patient.emergencyContact,
+          assignedProviderId: patient.assignedProviderId,
+        };
+        
+        localStorage.setItem('onboardedPatient', JSON.stringify(patientInfo));
+        
+        setSuccess(`Welcome ${patient.name}! Your account has been created successfully. You can now login to access your dashboard.`);
+        
+        // Provide options for navigation
+        setTimeout(() => {
+          // Option 1: Redirect to welcome page for better UX
+          navigate('/patient/welcome', { 
+            state: { 
+              patient: patientInfo 
+            } 
+          });
+          
+          // Option 2: Could redirect directly to login page
+          // navigate('/patient/login', { 
+          //   state: { 
+          //     message: 'Account created successfully! Please login with your credentials.',
+          //     onboardedEmail: patient.email 
+          //   } 
+          // });
+          
+          // Option 3: Could auto-login if password was provided (not recommended for security)
+          // navigate('/patient/dashboard');
+        }, 3000);
+      } else if (response.data?.message) {
+        // Fallback for older API response format
         setSuccess('Registration successful! You can now login.');
         setTimeout(() => {
           navigate('/patient/login');
         }, 3000);
       } else {
-        setError('Registration failed');
+        setError('Registration failed - unexpected response format');
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');

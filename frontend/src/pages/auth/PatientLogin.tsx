@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -23,7 +23,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LoginForm } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
@@ -36,9 +36,25 @@ const schema = yup.object().shape({
 const PatientLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const theme = useTheme();
+
+  // Check if user is coming from registration with onboarded patient data
+  const onboardedPatient = localStorage.getItem('onboardedPatient');
+  const defaultEmail = onboardedPatient ? JSON.parse(onboardedPatient).email : '';
+  const welcomeMessage = location.state?.message || '';
+
+  // Show success message if coming from registration
+  useEffect(() => {
+    if (welcomeMessage) {
+      setSuccess(welcomeMessage);
+      // Clear the message after showing it
+      setTimeout(() => setSuccess(null), 5000);
+    }
+  }, [welcomeMessage]);
 
   const {
     control,
@@ -47,7 +63,7 @@ const PatientLogin: React.FC = () => {
   } = useForm<LoginForm>({
     resolver: yupResolver(schema),
     defaultValues: {
-      email: '',
+      email: defaultEmail,
       password: '',
     },
   });
@@ -61,6 +77,11 @@ const PatientLogin: React.FC = () => {
       const response = await authService.patientLogin(data);
       
       if (response && response.access_token) {
+        // Clear onboarded patient data after successful login
+        if (onboardedPatient) {
+          localStorage.removeItem('onboardedPatient');
+        }
+        
         login(response);
         navigate('/patient/dashboard');
       } else {
@@ -139,6 +160,21 @@ const PatientLogin: React.FC = () => {
               Welcome back! Please sign in to your account
             </Typography>
           </Box>
+
+          {success && (
+            <Alert 
+              severity="success" 
+              sx={{ 
+                mb: 3,
+                borderRadius: 2,
+                '& .MuiAlert-icon': {
+                  color: theme.palette.success.main,
+                },
+              }}
+            >
+              {success}
+            </Alert>
+          )}
 
           {error && (
             <Alert 

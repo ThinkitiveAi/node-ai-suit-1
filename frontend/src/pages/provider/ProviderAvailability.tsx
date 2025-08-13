@@ -24,7 +24,6 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
-  Alert,
   CircularProgress,
   Chip,
   Fab,
@@ -40,6 +39,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { toast } from 'react-toastify';
 import { availabilityService, locationService } from '../../services';
 import EMRLayout from '../../components/layout/EMRLayout';
 
@@ -73,7 +73,17 @@ const schema = yup.object().shape({
   startTime: yup.string().required('Start time is required'),
   endTime: yup.string().required('End time is required'),
   repeatType: yup.string().oneOf(['NONE', 'WEEKLY_2', 'WEEKLY_4', 'WEEKLY_6', 'WEEKLY_8']).required('Repeat type is required'),
-  locationId: yup.number().nullable().optional(),
+  locationId: yup.number().nullable().optional().test(
+    'virtual-no-location',
+    'Virtual availability should not have a location',
+    function(value) {
+      const { availabilityType } = this.parent;
+      if (availabilityType === 'VIRTUAL' && value) {
+        return false;
+      }
+      return true;
+    }
+  ),
   isActive: yup.boolean().required(),
 });
 
@@ -91,8 +101,6 @@ const ProviderAvailability: React.FC = () => {
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAvailability, setEditingAvailability] = useState<Availability | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -110,7 +118,7 @@ const ProviderAvailability: React.FC = () => {
       startTime: '',
       endTime: '',
       repeatType: 'NONE',
-      locationId: undefined,
+      locationId: '',
       isActive: true,
     },
   });
@@ -123,12 +131,12 @@ const ProviderAvailability: React.FC = () => {
   const fetchAvailabilities = async () => {
     try {
       setLoading(true);
-      setError(null);
       const response = await availabilityService.getCurrentProviderAvailability();
       // Ensure we always set an array, even if the API returns unexpected data
       setAvailabilities(Array.isArray(response.data) ? response.data : []);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch availability');
+      const errorMessage = err.message || 'Failed to fetch availability';
+      toast.error(errorMessage);
       // Set empty array on error to prevent filter errors
       setAvailabilities([]);
     } finally {
@@ -144,7 +152,8 @@ const ProviderAvailability: React.FC = () => {
       const providerId = user?.id ? parseInt(user.id) : null;
 
       if (!providerId) {
-        setError('Provider ID not found. Please login again.');
+        const errorMessage = 'Provider ID not found. Please login again.';
+        toast.error(errorMessage);
         setLocations([]);
         return;
       }
@@ -153,6 +162,7 @@ const ProviderAvailability: React.FC = () => {
       setLocations(Array.isArray(response.data) ? response.data : []);
     } catch (err: any) {
       console.error('Failed to fetch locations:', err);
+      toast.error('Failed to fetch locations');
       setLocations([]);
     }
   };
@@ -177,7 +187,7 @@ const ProviderAvailability: React.FC = () => {
         startTime: '',
         endTime: '',
         repeatType: 'NONE',
-        locationId: undefined,
+        locationId: '',
         isActive: true,
       });
     }
@@ -187,18 +197,32 @@ const ProviderAvailability: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingAvailability(null);
-    reset();
+    reset({
+      availabilityType: 'OFFLINE',
+      dayOfWeek: '',
+      startTime: '',
+      endTime: '',
+      repeatType: 'NONE',
+      locationId: '',
+      isActive: true,
+    });
   };
 
   const onSubmit = async (data: any) => {
     try {
+      // Validate virtual availability should not have location
+      if (data.availabilityType === 'VIRTUAL' && data.locationId) {
+        toast.error('Virtual availability should not have a location.');
+        return;
+      }
+
       // Get provider ID from localStorage
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
       const providerId = user?.id ? parseInt(user.id) : null;
 
       if (!providerId) {
-        setError('Provider ID not found. Please login again.');
+        toast.error('Provider ID not found. Please login again.');
         return;
       }
 
@@ -211,15 +235,16 @@ const ProviderAvailability: React.FC = () => {
 
       if (editingAvailability) {
         await availabilityService.updateAvailability(editingAvailability.id, requestData);
-        setSuccess('Availability updated successfully');
+        toast.success('Availability updated successfully');
       } else {
         await availabilityService.createAvailability(requestData);
-        setSuccess('Availability created successfully');
+        toast.success('Availability created successfully');
       }
       handleCloseDialog();
       fetchAvailabilities();
     } catch (err: any) {
-      setError(err.message || 'Failed to save availability');
+      const errorMessage = err.message || 'Failed to save availability';
+      toast.error(errorMessage);
     }
   };
 
@@ -227,10 +252,11 @@ const ProviderAvailability: React.FC = () => {
     try {
       setDeletingId(id);
       await availabilityService.deleteAvailability(id);
-      setSuccess('Availability deleted successfully');
+      toast.success('Availability deleted successfully');
       fetchAvailabilities();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete availability');
+      const errorMessage = err.message || 'Failed to delete availability';
+      toast.error(errorMessage);
     } finally {
       setDeletingId(null);
     }
@@ -266,18 +292,6 @@ const ProviderAvailability: React.FC = () => {
             Set your working hours and availability for patient appointments.
           </Typography>
         </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
-            {success}
-          </Alert>
-        )}
 
         {/* Availability Table */}
         <Card sx={{ mb: 3 }}>
@@ -392,13 +406,7 @@ const ProviderAvailability: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                   Add your working hours to start receiving appointments.
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleOpenDialog()}
-                >
-                  Add First Availability
-                </Button>
+                
               </Box>
             )}
           </CardContent>
@@ -543,7 +551,7 @@ const ProviderAvailability: React.FC = () => {
                   render={({ field }) => (
                     <FormControl fullWidth error={!!errors.locationId}>
                       <InputLabel>Location</InputLabel>
-                      <Select {...field} label="Location">
+                      <Select {...field} label="Location" value={field.value || ''}>
                         <MenuItem value="">No Location</MenuItem>
                         {locations.map((location) => (
                           <MenuItem key={location.id} value={location.id}>

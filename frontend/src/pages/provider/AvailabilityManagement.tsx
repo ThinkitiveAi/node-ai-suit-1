@@ -24,7 +24,6 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
-  Alert,
   CircularProgress,
   Chip,
   useTheme,
@@ -35,10 +34,12 @@ import {
   Delete as DeleteIcon,
   Schedule as ScheduleIcon,
   ArrowForward as ArrowForwardIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { toast } from 'react-toastify';
 import { availabilityService, locationService } from '../../services';
 
 const schema = yup.object().shape({
@@ -47,7 +48,17 @@ const schema = yup.object().shape({
   startTime: yup.string().required('Start time is required'),
   endTime: yup.string().required('End time is required'),
   repeatType: yup.string().oneOf(['NONE', 'WEEKLY_2', 'WEEKLY_4', 'WEEKLY_6', 'WEEKLY_8']).required('Repeat type is required'),
-  locationId: yup.number().nullable().optional(),
+  locationId: yup.number().nullable().optional().test(
+    'virtual-no-location',
+    'Virtual availability should not have a location',
+    function(value) {
+      const { availabilityType } = this.parent;
+      if (availabilityType === 'VIRTUAL' && value) {
+        return false;
+      }
+      return true;
+    }
+  ),
   isActive: yup.boolean().required(),
 });
 
@@ -63,6 +74,19 @@ interface AvailabilitySlot {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  location?: {
+    id: number;
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+  };
+  provider?: {
+    id: number;
+    name: string;
+    email: string;
+    specialty: string;
+  };
 }
 
 interface AvailabilityFormData {
@@ -89,8 +113,6 @@ const AvailabilityManagement: React.FC = () => {
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -100,6 +122,7 @@ const AvailabilityManagement: React.FC = () => {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<any>({
     resolver: yupResolver(schema),
@@ -109,10 +132,13 @@ const AvailabilityManagement: React.FC = () => {
       startTime: '',
       endTime: '',
       repeatType: 'NONE',
-      locationId: null,
+      locationId: '',
       isActive: true,
     },
   });
+
+  // Watch availabilityType to dynamically control location field
+  const availabilityType = watch('availabilityType');
 
   useEffect(() => {
     fetchAvailability();
@@ -122,12 +148,12 @@ const AvailabilityManagement: React.FC = () => {
   const fetchAvailability = async () => {
     try {
       setLoading(true);
-      setError(null);
       const response = await availabilityService.getCurrentProviderAvailability();
-      // Ensure we always set an array, even if the API returns unexpected data
-      setAvailability(Array.isArray(response.data) ? response.data : []);
+      // Handle nested data structure from API response
+      const availabilityData = (response.data as any)?.data || response.data || [];
+      setAvailability(Array.isArray(availabilityData) ? availabilityData : []);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch availability');
+      toast.error(err.message || 'Failed to fetch availability');
       // Set empty array on error to prevent filter errors
       setAvailability([]);
     } finally {
@@ -143,7 +169,7 @@ const AvailabilityManagement: React.FC = () => {
       const providerId = user?.id ? parseInt(user.id) : null;
 
       if (!providerId) {
-        setError('Provider ID not found. Please login again.');
+        toast.error('Provider ID not found. Please login again.');
         setLocations([]);
         return;
       }
@@ -176,7 +202,7 @@ const AvailabilityManagement: React.FC = () => {
         startTime: '',
         endTime: '',
         repeatType: 'NONE',
-        locationId: null,
+        locationId: '',
         isActive: true,
       });
     }
@@ -186,18 +212,32 @@ const AvailabilityManagement: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedSlot(null);
-    reset();
+    reset({
+      availabilityType: 'OFFLINE',
+      dayOfWeek: '',
+      startTime: '',
+      endTime: '',
+      repeatType: 'NONE',
+      locationId: '',
+      isActive: true,
+    });
   };
 
   const onSubmit = async (data: any) => {
     try {
+      // Validate virtual availability should not have location
+      if (data.availabilityType === 'VIRTUAL' && data.locationId) {
+        toast.error('Virtual availability should not have a location.');
+        return;
+      }
+
       // Get provider ID from localStorage
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
       const providerId = user?.id ? parseInt(user.id) : null;
 
       if (!providerId) {
-        setError('Provider ID not found. Please login again.');
+        toast.error('Provider ID not found. Please login again.');
         return;
       }
 
@@ -205,20 +245,20 @@ const AvailabilityManagement: React.FC = () => {
       const requestData = {
         providerId,
         ...data,
-        locationId: data.locationId ? parseInt(data.locationId) : undefined
+        locationId: data.locationId && data.locationId !== '' ? parseInt(data.locationId) : undefined
       };
 
       if (selectedSlot) {
         await availabilityService.updateAvailability(selectedSlot.id, requestData);
-        setSuccess('Availability updated successfully');
+        toast.success('Availability updated successfully');
       } else {
         await availabilityService.createAvailability(requestData);
-        setSuccess('Availability created successfully');
+        toast.success('Availability created successfully');
       }
       handleCloseDialog();
       fetchAvailability();
     } catch (err: any) {
-      setError(err.message || 'Failed to save availability');
+      toast.error(err.message || 'Failed to save availability');
     }
   };
 
@@ -226,10 +266,10 @@ const AvailabilityManagement: React.FC = () => {
     try {
       setDeletingId(slotId);
       await availabilityService.deleteAvailability(slotId);
-      setSuccess('Availability deleted successfully');
+      toast.success('Availability deleted successfully');
       fetchAvailability();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete availability');
+      toast.error(err.message || 'Failed to delete availability');
     } finally {
       setDeletingId(null);
     }
@@ -307,84 +347,103 @@ const AvailabilityManagement: React.FC = () => {
           </Button>
         </Box>
 
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3,
-              borderRadius: 2,
-              '& .MuiAlert-icon': {
-                color: theme.palette.error.main,
-              },
-            }} 
-            onClose={() => setError(null)}
-          >
-            {error}
-          </Alert>
-        )}
+        {/* Summary Cards */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
+          <Card sx={{ 
+            borderRadius: 3, 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            minWidth: 200,
+            flex: '1 1 200px'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                {availability.length}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Total Availability Slots
+              </Typography>
+            </CardContent>
+          </Card>
 
-        {success && (
-          <Alert 
-            severity="success" 
-            sx={{ 
-              mb: 3,
-              borderRadius: 2,
-              '& .MuiAlert-icon': {
-                color: theme.palette.success.main,
-              },
-            }} 
-            onClose={() => setSuccess(null)}
-          >
-            {success}
-          </Alert>
-        )}
+          <Card sx={{ 
+            borderRadius: 3, 
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            color: 'white',
+            minWidth: 200,
+            flex: '1 1 200px'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                {availability.filter(slot => slot.isActive).length}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Active Slots
+              </Typography>
+            </CardContent>
+          </Card>
 
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-            border: '1px solid rgba(0, 0, 0, 0.05)',
-          }}
-        >
-          <CardContent sx={{ p: 4 }}>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                mb: 3, 
-                fontWeight: 600,
-                color: theme.palette.primary.main,
-              }}
-            >
-              Current Schedule
-            </Typography>
-            
-            {Array.isArray(availability) && availability.length > 0 ? (
+          <Card sx={{ 
+            borderRadius: 3, 
+            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            color: 'white',
+            minWidth: 200,
+            flex: '1 1 200px'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                {availability.filter(slot => slot.availabilityType === 'VIRTUAL').length}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Virtual Sessions
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ 
+            borderRadius: 3, 
+            background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+            color: 'white',
+            minWidth: 200,
+            flex: '1 1 200px'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                {availability.filter(slot => slot.availabilityType === 'OFFLINE').length}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Offline Sessions
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {Array.isArray(availability) && availability.length > 0 ? (
+          <Card sx={{ borderRadius: 3, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
+            <CardContent sx={{ p: 0 }}>
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: 'rgba(102, 126, 234, 0.04)' }}>
-                      <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
+                      <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main, pl: 3 }}>
                         Type
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
                         Day
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                        Start Time
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                        End Time
+                        Time
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
                         Repeat
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                        Location ID
+                        Location
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
                         Status
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
+                      <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main, pr: 3 }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -396,45 +455,61 @@ const AvailabilityManagement: React.FC = () => {
                         sx={{ 
                           '&:hover': { 
                             backgroundColor: 'rgba(102, 126, 234, 0.02)' 
-                          } 
+                          },
+                          '&:last-child td': { border: 0 }
                         }}
                       >
-                        <TableCell>
+                        <TableCell sx={{ pl: 3 }}>
                           <Chip
                             label={slot.availabilityType}
                             color={slot.availabilityType === 'VIRTUAL' ? 'primary' : 'secondary'}
                             size="small"
-                            sx={{ fontWeight: 600 }}
+                            sx={{ 
+                              fontWeight: 600,
+                              minWidth: 80,
+                              textTransform: 'capitalize'
+                            }}
                           />
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body1" fontWeight="600">
-                            {slot.dayOfWeek}
+                          <Typography variant="body1" fontWeight="600" color="text.primary">
+                            {slot.dayOfWeek.charAt(0) + slot.dayOfWeek.slice(1).toLowerCase()}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {slot.startTime}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {slot.endTime}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" color="text.primary" fontWeight="500">
+                              {slot.startTime} - {slot.endTime}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {Math.abs(new Date(`2000-01-01T${slot.endTime}`).getTime() - new Date(`2000-01-01T${slot.startTime}`).getTime()) / (1000 * 60 * 60)} hours
+                            </Typography>
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
                             {slot.repeatType === 'NONE' ? 'No Repeat' : 
-                             slot.repeatType === 'WEEKLY_2' ? 'Weekly (2 weeks)' :
-                             slot.repeatType === 'WEEKLY_4' ? 'Weekly (4 weeks)' :
-                             slot.repeatType === 'WEEKLY_6' ? 'Weekly (6 weeks)' :
-                             slot.repeatType === 'WEEKLY_8' ? 'Weekly (8 weeks)' : slot.repeatType}
+                             slot.repeatType === 'WEEKLY_2' ? 'Every 2 weeks' :
+                             slot.repeatType === 'WEEKLY_4' ? 'Every 4 weeks' :
+                             slot.repeatType === 'WEEKLY_6' ? 'Every 6 weeks' :
+                             slot.repeatType === 'WEEKLY_8' ? 'Every 8 weeks' : slot.repeatType}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {slot.locationId || '-'}
-                          </Typography>
+                          {slot.location ? (
+                            <Box>
+                              <Typography variant="body2" color="text.primary" fontWeight="500">
+                                {slot.location.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {slot.location.city}, {slot.location.state}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              {slot.availabilityType === 'VIRTUAL' ? 'Virtual Session' : 'No Location'}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Chip
@@ -444,93 +519,95 @@ const AvailabilityManagement: React.FC = () => {
                             sx={{
                               fontWeight: 600,
                               borderRadius: 1,
+                              minWidth: 70,
                             }}
                           />
                         </TableCell>
-                        <TableCell>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenDialog(slot)}
-                            color="primary"
-                            sx={{
-                              mr: 1,
-                              '&:hover': {
-                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                              },
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(slot.id)}
-                            color="error"
-                            disabled={deletingId === slot.id}
-                            sx={{
-                              '&:hover': {
-                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                              },
-                            }}
-                          >
-                            {deletingId === slot.id ? (
-                              <CircularProgress size={20} />
-                            ) : (
-                              <DeleteIcon />
-                            )}
-                          </IconButton>
+                        <TableCell sx={{ pr: 3 }}>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDialog(slot)}
+                              color="primary"
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                },
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(slot.id)}
+                              color="error"
+                              disabled={deletingId === slot.id}
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                },
+                              }}
+                            >
+                              {deletingId === slot.id ? (
+                                <CircularProgress size={16} />
+                              ) : (
+                                <DeleteIcon fontSize="small" />
+                              )}
+                            </IconButton>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 6 }}>
-                <ScheduleIcon 
-                  sx={{ 
-                    fontSize: 80, 
-                    color: theme.palette.primary.main, 
-                    mb: 3,
-                    opacity: 0.7,
-                  }} 
-                />
-                <Typography 
-                  variant="h5" 
-                  color="text.secondary" 
-                  gutterBottom
-                  sx={{ fontWeight: 600 }}
-                >
-                  No availability set
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 400, mx: 'auto' }}>
-                  Add your working hours to start receiving appointments from patients.
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  endIcon={<ArrowForwardIcon />}
-                  onClick={() => handleOpenDialog()}
-                  sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: 2,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                    },
-                  }}
-                >
-                  Add First Availability
-                </Button>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <ScheduleIcon 
+              sx={{ 
+                fontSize: 80, 
+                color: theme.palette.primary.main, 
+                mb: 3,
+                opacity: 0.7,
+              }} 
+            />
+            <Typography 
+              variant="h5" 
+              color="text.secondary" 
+              gutterBottom
+              sx={{ fontWeight: 600 }}
+            >
+              No availability set
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 400, mx: 'auto' }}>
+              Add your working hours to start receiving appointments from patients.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              endIcon={<ArrowForwardIcon />}
+              onClick={() => handleOpenDialog()}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: 2,
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                },
+              }}
+            >
+              Add First Availability
+            </Button>
+          </Box>
+        )}
 
         {/* Add/Edit Dialog */}
         <Dialog 
@@ -676,7 +753,20 @@ const AvailabilityManagement: React.FC = () => {
                   render={({ field }) => (
                     <FormControl fullWidth error={!!errors.locationId}>
                       <InputLabel>Location</InputLabel>
-                      <Select {...field} label="Location">
+                      <Select 
+                        {...field} 
+                        label="Location" 
+                        value={field.value || ''}
+                        disabled={availabilityType === 'VIRTUAL'}
+                        onChange={(e) => {
+                          // Clear location when switching to virtual
+                          if (availabilityType === 'VIRTUAL') {
+                            field.onChange('');
+                          } else {
+                            field.onChange(e.target.value);
+                          }
+                        }}
+                      >
                         <MenuItem value="">No Location</MenuItem>
                         {locations.map((location) => (
                           <MenuItem key={location.id} value={location.id}>

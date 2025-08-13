@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './contexts/AuthContext';
 import theme from './theme';
 
@@ -20,9 +22,12 @@ import ProviderAvailability from './pages/provider/ProviderAvailability';
 import AvailabilityManagement from './pages/provider/AvailabilityManagement';
 import ProviderProfile from './pages/provider/ProviderProfile';
 import MyPatients from './pages/provider/MyPatients';
+import ProviderAppointments from './pages/provider/ProviderAppointments';
+import ProviderSchedule from './pages/provider/ProviderSchedule';
 
 // Home Page
 import HomePage from './pages/HomePage';
+import PatientWelcome from './pages/patient/PatientWelcome';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ 
@@ -63,6 +68,7 @@ function App() {
             <Route path="/provider/login" element={<ProviderLogin />} />
             <Route path="/patient/register" element={<PatientRegister />} />
             <Route path="/provider/register" element={<ProviderRegister />} />
+            <Route path="/patient/welcome" element={<PatientWelcome />} />
 
             {/* Protected Patient Routes */}
             <Route 
@@ -116,6 +122,22 @@ function App() {
               } 
             />
             <Route 
+              path="/provider/schedule" 
+              element={
+                <ProtectedRoute allowedRoles={['provider']}>
+                  <ProviderSchedule />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/provider/appointments" 
+              element={
+                <ProtectedRoute allowedRoles={['provider']}>
+                  <ProviderAppointments />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/provider/availability-management" 
               element={
                 <ProtectedRoute allowedRoles={['provider']}>
@@ -127,6 +149,7 @@ function App() {
             {/* Fallback Route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <ToastContainer />
         </Router>
       </AuthProvider>
     </ThemeProvider>

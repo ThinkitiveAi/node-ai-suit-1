@@ -16,22 +16,27 @@ interface ProviderOnboardRequest {
 }
 
 interface ProviderOnboardResponse {
-  provider: {
-    id: number;
-    email: string;
-    name: string;
-    phone: string;
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    specialty: string;
-    licenseNumber: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+  success: boolean;
+  data: {
+    provider: {
+      id: number;
+      email: string;
+      name: string;
+      phone: string;
+      specialty: string;
+      streetAddress: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+      roleId: number;
+      archived: boolean;
+      createdAt: string;
+      updatedAt: string;
+    };
+    message: string;
   };
-  message: string;
+  timestamp: string;
 }
 
 interface ProviderListResponse {

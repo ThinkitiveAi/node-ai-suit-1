@@ -26,12 +26,20 @@ import {
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
   Badge as BadgeIcon,
+  Login as LoginIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Link, useNavigate } from 'react-router-dom';
 import { providerService } from '../../services';
+
+// Type definition for onboarded provider
+interface OnboardedProvider {
+  id: number;
+  email: string;
+  name: string;
+}
 
 const schema = yup.object().shape({
   email: yup.string().email('Invalid email format').required('Email is required'),
@@ -52,6 +60,7 @@ const ProviderRegister: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [onboardedProvider, setOnboardedProvider] = useState<OnboardedProvider | null>(null);
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -99,13 +108,28 @@ const ProviderRegister: React.FC = () => {
       };
 
       const response = await providerService.onboardProvider(providerData);
-      if (response.message) {
-        setSuccess('Registration successful! You can now login.');
+      
+      // Check if the response indicates success
+      if (response.success && response.data.message) {
+        setSuccess('Provider onboarded successfully! You can now login or go to your dashboard.');
+        
+        // Store provider info in state and localStorage for potential auto-login
+        if (response.data.provider) {
+          const providerInfo = {
+            email: response.data.provider.email,
+            name: response.data.provider.name,
+            id: response.data.provider.id
+          };
+          setOnboardedProvider(providerInfo);
+          localStorage.setItem('onboardedProvider', JSON.stringify(providerInfo));
+        }
+        
+        // Navigate after 3 seconds to allow user to read the success message
         setTimeout(() => {
           navigate('/provider/login');
         }, 3000);
       } else {
-        setError('Registration failed');
+        setError('Registration failed - unexpected response format');
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -207,7 +231,71 @@ const ProviderRegister: React.FC = () => {
                 },
               }}
             >
-              {success}
+              <Box>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {success}
+                </Typography>
+                
+                {/* Show provider details if available */}
+                {onboardedProvider && (
+                  <Box sx={{ mb: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                      Provider Details:
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      Name: {onboardedProvider.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      Email: {onboardedProvider.email}
+                    </Typography>
+                    <Typography variant="body2">
+                      ID: {onboardedProvider.id}
+                    </Typography>
+                  </Box>
+                )}
+                
+                {/* Navigation options */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => navigate('/provider/login')}
+                    startIcon={<LoginIcon />}
+                    size="small"
+                  >
+                    Go to Login
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={() => {
+                      // Navigate to provider profile setup (they'll need to login first)
+                      navigate('/provider/login', { 
+                        state: { 
+                          message: 'Please login to complete your profile setup',
+                          redirectTo: '/provider/profile'
+                        }
+                      });
+                    }}
+                    size="small"
+                  >
+                    Setup Profile
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => {
+                      // Clear the onboarded provider data
+                      setOnboardedProvider(null);
+                      localStorage.removeItem('onboardedProvider');
+                      setSuccess(null);
+                    }}
+                    size="small"
+                  >
+                    Continue Registration
+                  </Button>
+                </Box>
+              </Box>
             </Alert>
           )}
 

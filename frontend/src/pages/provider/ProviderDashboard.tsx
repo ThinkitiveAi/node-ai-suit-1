@@ -86,7 +86,7 @@ const ProviderDashboard: React.FC = () => {
           email: patient.email,
           phone: patient.phone,
           lastVisit: new Date(patient.createdAt).toLocaleDateString(),
-          status: (patient.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
+          status: (!patient.archived ? 'active' : 'inactive') as 'active' | 'inactive',
         }));
 
         setRecentPatients(recentPatientsData);
@@ -169,7 +169,8 @@ const ProviderDashboard: React.FC = () => {
 
         {/* Statistics Cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
-          <StatCard
+          <StatCard 
+         
             title="Total Patients"
             value={stats.totalPatients}
             icon={<PeopleIcon />}
@@ -296,11 +297,12 @@ const ProviderDashboard: React.FC = () => {
                           </Box>
                         }
                         secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
+                          <Box component="span">
+                            <Typography component="span" variant="body2" color="text.secondary">
                               {patient.email} • {patient.phone}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <br />
+                            <Typography component="span" variant="caption" color="text.secondary">
                               Last visit: {patient.lastVisit}
                             </Typography>
                           </Box>

@@ -193,11 +193,11 @@ const MyPatients: React.FC = () => {
                 color: 'white',
               }}
             >
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              <CardContent sx={{ textAlign: 'center', display:'flex' , alignItems:'center' , justifyContent:'center'  }}>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
                   {patients.length}
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                <Typography variant="body2" sx={{ opacity: 0.9 ,  }}>
                   Total Patients
                 </Typography>
               </CardContent>

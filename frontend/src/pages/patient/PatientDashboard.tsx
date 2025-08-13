@@ -55,7 +55,18 @@ const PatientDashboard: React.FC = () => {
         try {
           setLoading(true);
           const response = await providerService.getProviderById(patient.assignedProviderId);
-          setAssignedProvider(response.provider);
+          // Map the API response to match the ProviderInfo interface
+          const providerInfo: ProviderInfo = {
+            id: response.data.provider.id,
+            name: response.data.provider.name,
+            specialty: response.data.provider.specialty,
+            phone: response.data.provider.phone,
+            email: response.data.provider.email,
+            address: response.data.provider.streetAddress,
+            city: response.data.provider.city,
+            state: response.data.provider.state,
+          };
+          setAssignedProvider(providerInfo);
         } catch (err: any) {
           setError('Failed to fetch assigned provider information');
           console.error('Error fetching provider:', err);

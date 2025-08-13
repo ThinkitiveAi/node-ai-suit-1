@@ -23,7 +23,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LoginForm } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
@@ -37,8 +37,13 @@ const ProviderLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const theme = useTheme();
+
+  // Check if user is coming from registration with onboarded provider data
+  const onboardedProvider = localStorage.getItem('onboardedProvider');
+  const defaultEmail = onboardedProvider ? JSON.parse(onboardedProvider).email : '';
 
   const {
     control,
@@ -47,7 +52,7 @@ const ProviderLogin: React.FC = () => {
   } = useForm<LoginForm>({
     resolver: yupResolver(schema),
     defaultValues: {
-      email: '',
+      email: defaultEmail,
       password: '',
     },
   });
@@ -62,7 +67,15 @@ const ProviderLogin: React.FC = () => {
       
       if (response && response.access_token) {
         login(response);
-        navigate('/provider/dashboard');
+        
+        // Clear onboarded provider data after successful login
+        if (onboardedProvider) {
+          localStorage.removeItem('onboardedProvider');
+        }
+        
+        // Navigate to the intended destination or default to dashboard
+        const redirectTo = location.state?.redirectTo || '/provider/dashboard';
+        navigate(redirectTo);
       } else {
         setError('Login failed. Please check your credentials.');
       }
@@ -152,6 +165,27 @@ const ProviderLogin: React.FC = () => {
               }}
             >
               {error}
+            </Alert>
+          )}
+
+          {/* Show message from registration page */}
+          {location.state?.message && (
+            <Alert 
+              severity="info" 
+              sx={{ 
+                mb: 3,
+                borderRadius: 2,
+                '& .MuiAlert-icon': {
+                  color: theme.palette.info.main,
+                },
+              }}
+            >
+              {location.state.message}
+              {location.state.redirectTo && (
+                <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                  After login, you'll be redirected to complete your profile setup.
+                </Typography>
+              )}
             </Alert>
           )}
 
